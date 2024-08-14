@@ -31,10 +31,8 @@ export interface INewMintToAta {
 
 export const newMintToAta = async (connection, minter: Keypair): Promise<INewMintToAta> => {
   const mint = await createMint(connection, minter, minter.publicKey, null, 6)
-  
-  // await getAccount(connection, mint, commitment)
   const ata = await createAccount(connection, minter, mint, minter.publicKey)
-  const signature = await mintTo(connection, minter, mint, ata, minter, 1e9)
+  const signature = await mintTo(connection, minter, mint, ata, minter, 2e9)
   
   await confirmTx(connection, signature)
 

@@ -1,0 +1,36 @@
+# Curve
+
+Explanation of Key Concepts
+
+1. Invariant (K)
+
+    The invariant, often referred to as K, is the product of the balances of the two tokens in the liquidity pool. For a Constant Product AMM, this value must remain constant when swapping tokens, ensuring the pool remains balanced:
+
+    * K=X×Y
+
+    When a swap occurs, one of the token balances increases, and the other decreases. The new balances are calculated such that the product of the new balances equals K.
+
+2. Spot Price
+
+    The spot price is the current price of one token in terms of the other. It is calculated as:
+    
+    * Spot Price of X=X/Y
+    ​
+
+    This price can be used to determine the exchange rate between the two tokens.
+
+3. Slippage Protection
+
+    Slippage refers to the difference between the expected price of a trade and the actual price. 
+    
+    Slippage protection ensures that if the price moves too much against the trader during the swap, the trade will fail to protect the trader from unfavorable rates.
+
+4. Fee Calculation
+
+    The fee is calculated as a percentage of the amount being swapped. 
+    
+    It is deducted from the input amount before performing the swap to ensure the pool remains balanced and to compensate liquidity providers.
+
+Final Thoughts
+
+This ConstantProduct AMM implementation is a simplified version of a more complex real-world application like Uniswap. It demonstrates the core principles of automated market makers (AMMs) and provides a good foundation for understanding how decentralized exchanges work under the hood.

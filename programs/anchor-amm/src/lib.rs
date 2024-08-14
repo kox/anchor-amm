@@ -25,6 +25,16 @@ pub mod anchor_amm {
     ) -> Result<()> {
         ctx.accounts.initialize(seed, fee, authority, &ctx.bumps)
     }
+
+    pub fn deposit(
+        ctx: Context<Deposit>,
+        amount: u64,
+        x_max: u64,
+        y_max: u64,
+        expiration: i64,
+    ) -> Result<()> {
+        ctx.accounts.deposit(amount, x_max, y_max, expiration)
+    }
 /* 
     pub fn deposit(ctx: Context<Initialize>) -> Result<()> {
         msg!("Greetings from: {:?}", ctx.program_id);

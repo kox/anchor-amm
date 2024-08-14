@@ -4,10 +4,10 @@ import { AnchorAmm } from "../target/types/anchor_amm";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { randomBytes } from "crypto"
 import { BN } from "bn.js";
-import { assert } from "chai";
+import { assert, expect } from "chai";
 
-import { newMintToAta } from './utils';
-import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { commitment, newMintToAta } from './utils';
+import { ASSOCIATED_TOKEN_PROGRAM_ID, getAccount, getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 
 describe("anchor-amm", () => {
@@ -68,6 +68,9 @@ describe("anchor-amm", () => {
   let yVaultAta: PublicKey = undefined;
   let lpVaultAta: PublicKey = undefined;
 
+  const mintNumber = 2e9;
+  const depositNumber = 1e9;
+
   const accounts = {
     auth,
     xMint,
@@ -89,15 +92,15 @@ describe("anchor-amm", () => {
         SystemProgram.transfer({
           fromPubkey: provider.publicKey,
           toPubkey: account.publicKey,
-          lamports: 10 * LAMPORTS_PER_SOL,
+          lamports: 20 * LAMPORTS_PER_SOL,
         })
       )];
     await provider.sendAndConfirm(tx).then(log);
 
     const creatorBalance = await connection.getBalance(creatorPool.publicKey);
     const userBalance = await connection.getBalance(userPool.publicKey);
-    assert.equal(creatorBalance, 10 * LAMPORTS_PER_SOL);
-    assert.equal(userBalance, 10 * LAMPORTS_PER_SOL);
+    assert.equal(creatorBalance, 20 * LAMPORTS_PER_SOL);
+    assert.equal(userBalance, 20 * LAMPORTS_PER_SOL);
   });
 
   it('should create all mints and atas required for starting the AMM', async () => {
@@ -107,6 +110,7 @@ describe("anchor-amm", () => {
 
     xMint = xToken.mint;
     yMint = yToken.mint;
+
     xAta = xToken.ata;
     yAta = yToken.ata;
     lpAta = await getAssociatedTokenAddress(lpMint, creatorPool.publicKey, false, TOKEN_PROGRAM_ID);
@@ -138,16 +142,18 @@ describe("anchor-amm", () => {
     const xAtaBalance = await connection.getTokenAccountBalance(xAta);
     const yAtaBalance = await connection.getTokenAccountBalance(yAta);
 
-    assert.equal(xAtaBalance.value.uiAmount, 1000, "xAta should have 1000 tokens");
-    assert.equal(yAtaBalance.value.uiAmount, 1000, "yAta should have 1000 tokens");
+    assert.equal(xAtaBalance.value.uiAmount, 2000, "xAta should have 2000 tokens");
+    assert.equal(yAtaBalance.value.uiAmount, 2000, "yAta should have 2000 tokens");
   });
 
   it('should initialize the config account and the 2 empty vaults per X and Y tokens', async () => {
-      await program.methods.initialize(seed, 100, creatorPool.publicKey)
+      await program.methods.initialize(seed, 0, creatorPool.publicKey)
         .accounts({
           payer: creatorPool.publicKey,
           xMint,
-          yMint,   
+          yMint,
+          /* xVault: xVaultAta,
+          yVault: yVaultAta,  */ 
         })
         .signers([creatorPool])
         .rpc()
@@ -165,11 +171,60 @@ describe("anchor-amm", () => {
       const configAccount = await program.account.config.fetch(config);
       assert.equal(configAccount.seed.toString(), seed.toString());
       assert.equal(configAccount.authority.toString(), creatorPool.publicKey.toString());
-      assert.equal(configAccount.fee, 100);
+      assert.equal(configAccount.fee, 0);
       assert.equal(configAccount.locked, false);
   })
 
-  /* it('should be able to deposity tokens to the LP and it will receive LP tokens', async () => {
-    await program.methods
-  }); */
+  it('should be able to deposity tokens to the LP and it will receive LP tokens', async () => {
+    const expiration = new BN(Math.floor(new Date().getTime()/1000) + 600);
+
+    // Assert that vault ATAs are initialized with zero balance
+    const xVaultAtaBalance = await connection.getTokenAccountBalance(xVaultAta);
+    const yVaultAtaBalance = await connection.getTokenAccountBalance(yVaultAta);
+
+    assert.equal(xVaultAtaBalance.value.uiAmount, 0, "xVaultAta should have 0 tokens initially");
+    assert.equal(yVaultAtaBalance.value.uiAmount, 0, "yVaultAta should have 0 tokens initially");
+
+    await program.methods.deposit(
+      new BN(1 * 1e6),
+      new BN(depositNumber),
+      new BN(depositNumber),
+      expiration,
+    )
+    .accounts({
+      payer: creatorPool.publicKey,
+      config: config,
+      xMint: xMint,
+      yMint: yMint,
+      xVaultAta: xVaultAta,
+      yVaultAta: yVaultAta,
+      xUser: xAta,
+      yUser: yAta,
+    })
+    .signers([creatorPool])
+    .rpc()
+    .then(confirm)
+    .then(log);
+
+
+    // Assert that vault ATAs are initialized with zero balance
+    const xBalance = await connection.getTokenAccountBalance(xVaultAta);
+    const yBalance = await connection.getTokenAccountBalance(yVaultAta);
+
+    assert.equal(xBalance.value.amount, yBalance.value.amount, "Vaults are unbalanced");
+    assert.equal(xBalance.value.amount, depositNumber.toString(), "Vaults didn't get the correct deposit");
+
+
+    // Optionally, assert the initial token balances (assuming newMintToAta mints some tokens)
+    const xAtaBalance = await connection.getTokenAccountBalance(xAta);
+    const yAtaBalance = await connection.getTokenAccountBalance(yAta);
+ 
+    assert.equal(xAtaBalance.value.amount, (mintNumber - depositNumber).toString() , "Wrong number of X tokens left in the creator");
+    assert.equal(xAtaBalance.value.amount, (mintNumber - depositNumber).toString() , "Wrong number of Y tokens left in the creator");
+  
+    // We need to check the pool minted those lp tokens
+    const lpAtaBalance = await connection.getTokenAccountBalance(lpAta);
+    assert.equal(lpAtaBalance.value.amount, 1e6.toString());
+  });
 });
+

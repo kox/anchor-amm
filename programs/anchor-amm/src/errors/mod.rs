@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
-use constant_product_curve::CurveError;
+
+use crate::helpers::CurveError;
 
 #[error_code]
 pub enum AmmError {
