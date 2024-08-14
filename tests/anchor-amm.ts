@@ -70,6 +70,7 @@ describe("anchor-amm", () => {
 
   const mintNumber = 2e9;
   const depositNumber = 1e9;
+  const expiration = new BN(Math.floor(new Date().getTime() / 1000) + 600);
 
   const accounts = {
     auth,
@@ -147,37 +148,110 @@ describe("anchor-amm", () => {
   });
 
   it('should initialize the config account and the 2 empty vaults per X and Y tokens', async () => {
-      await program.methods.initialize(seed, 0, creatorPool.publicKey)
+    await program.methods.initialize(seed, 0, creatorPool.publicKey)
+      .accounts({
+        payer: creatorPool.publicKey,
+        xMint,
+        yMint,
+        /* xVault: xVaultAta,
+        yVault: yVaultAta,  */
+      })
+      .signers([creatorPool])
+      .rpc()
+      .then(confirm)
+      .then(log);
+
+    // Assert that vault ATAs are initialized with zero balance
+    const xVaultAtaBalance = await connection.getTokenAccountBalance(xVaultAta);
+    const yVaultAtaBalance = await connection.getTokenAccountBalance(yVaultAta);
+
+    assert.equal(xVaultAtaBalance.value.uiAmount, 0, "xVaultAta should have 0 tokens initially");
+    assert.equal(yVaultAtaBalance.value.uiAmount, 0, "yVaultAta should have 0 tokens initially");
+
+    // The config fee should be fillup too
+    const configAccount = await program.account.config.fetch(config);
+    assert.equal(configAccount.seed.toString(), seed.toString());
+    assert.equal(configAccount.authority.toString(), creatorPool.publicKey.toString());
+    assert.equal(configAccount.fee, 0);
+    assert.equal(configAccount.locked, false);
+  });
+
+  it('should not allow to modify config account without authority', async () => {
+    try {
+      await program.methods.lock()
+      .accounts({
+        payer: userPool.publicKey,
+        config,
+      })
+      .signers([userPool])
+      .rpc()
+      .then(confirm)
+      .then(log);
+    } catch (err) {
+      assert.equal(err.error.errorCode.code, "InvalidAuthority");
+      assert.equal(err.error.errorMessage, "Invalid update authority.")
+    }
+  });
+
+  it('should lock the config and don\'t allow deposits', async () => {
+    await program.methods.lock()
+      .accounts({
+        payer: creatorPool.publicKey,
+        config,
+      })
+      .signers([creatorPool])
+      .rpc()
+      .then(confirm)
+      .then(log);
+
+    // The pool should be locked
+    const configAccount = await program.account.config.fetch(config);
+    assert.equal(configAccount.locked, true);
+
+    try {
+      await program.methods.deposit(
+        new BN(1 * 1e6),
+        new BN(depositNumber),
+        new BN(depositNumber),
+        expiration,
+      )
         .accounts({
           payer: creatorPool.publicKey,
-          xMint,
-          yMint,
-          /* xVault: xVaultAta,
-          yVault: yVaultAta,  */ 
+          config: config,
+          xMint: xMint,
+          yMint: yMint,
+          xVaultAta: xVaultAta,
+          yVaultAta: yVaultAta,
+          xUser: xAta,
+          yUser: yAta,
         })
         .signers([creatorPool])
-        .rpc()
-        .then(confirm)
-        .then(log);
+        .rpc();
 
-      // Assert that vault ATAs are initialized with zero balance
-      const xVaultAtaBalance = await connection.getTokenAccountBalance(xVaultAta);
-      const yVaultAtaBalance = await connection.getTokenAccountBalance(yVaultAta);
-      
-      assert.equal(xVaultAtaBalance.value.uiAmount, 0, "xVaultAta should have 0 tokens initially");
-      assert.equal(yVaultAtaBalance.value.uiAmount, 0, "yVaultAta should have 0 tokens initially");
-      
-      // The config fee should be fillup too
-      const configAccount = await program.account.config.fetch(config);
-      assert.equal(configAccount.seed.toString(), seed.toString());
-      assert.equal(configAccount.authority.toString(), creatorPool.publicKey.toString());
-      assert.equal(configAccount.fee, 0);
-      assert.equal(configAccount.locked, false);
-  })
+        throw Error("should not arrive here!");
+      } catch (err) {
+        assert.equal(err.error.errorCode.code, "PoolLocked");
+        assert.equal(err.error.errorMessage, "This pool is locked.")
+      }
+  });
+
+  it('should lock the config and don\'t allow deposits', async () => {
+    await program.methods.unlock()
+      .accounts({
+        payer: creatorPool.publicKey,
+        config,
+      })
+      .signers([creatorPool])
+      .rpc()
+      .then(confirm)
+      .then(log);
+
+    // The pool should be locked
+    const configAccount = await program.account.config.fetch(config);
+    assert.equal(configAccount.locked, false);
+  });
 
   it('should be able to deposity tokens to the LP and it will receive LP tokens', async () => {
-    const expiration = new BN(Math.floor(new Date().getTime()/1000) + 600);
-
     // Assert that vault ATAs are initialized with zero balance
     const xVaultAtaBalance = await connection.getTokenAccountBalance(xVaultAta);
     const yVaultAtaBalance = await connection.getTokenAccountBalance(yVaultAta);
@@ -191,20 +265,20 @@ describe("anchor-amm", () => {
       new BN(depositNumber),
       expiration,
     )
-    .accounts({
-      payer: creatorPool.publicKey,
-      config: config,
-      xMint: xMint,
-      yMint: yMint,
-      xVaultAta: xVaultAta,
-      yVaultAta: yVaultAta,
-      xUser: xAta,
-      yUser: yAta,
-    })
-    .signers([creatorPool])
-    .rpc()
-    .then(confirm)
-    .then(log);
+      .accounts({
+        payer: creatorPool.publicKey,
+        config: config,
+        xMint: xMint,
+        yMint: yMint,
+        xVaultAta: xVaultAta,
+        yVaultAta: yVaultAta,
+        xUser: xAta,
+        yUser: yAta,
+      })
+      .signers([creatorPool])
+      .rpc()
+      .then(confirm)
+      .then(log);
 
 
     // Assert that vault ATAs are initialized with zero balance
@@ -218,13 +292,15 @@ describe("anchor-amm", () => {
     // Optionally, assert the initial token balances (assuming newMintToAta mints some tokens)
     const xAtaBalance = await connection.getTokenAccountBalance(xAta);
     const yAtaBalance = await connection.getTokenAccountBalance(yAta);
- 
-    assert.equal(xAtaBalance.value.amount, (mintNumber - depositNumber).toString() , "Wrong number of X tokens left in the creator");
-    assert.equal(xAtaBalance.value.amount, (mintNumber - depositNumber).toString() , "Wrong number of Y tokens left in the creator");
-  
+
+    assert.equal(xAtaBalance.value.amount, (mintNumber - depositNumber).toString(), "Wrong number of X tokens left in the creator");
+    assert.equal(xAtaBalance.value.amount, (mintNumber - depositNumber).toString(), "Wrong number of Y tokens left in the creator");
+
     // We need to check the pool minted those lp tokens
     const lpAtaBalance = await connection.getTokenAccountBalance(lpAta);
     assert.equal(lpAtaBalance.value.amount, 1e6.toString());
   });
+
+  
 });
 

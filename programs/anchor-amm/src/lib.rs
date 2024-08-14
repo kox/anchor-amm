@@ -35,6 +35,14 @@ pub mod anchor_amm {
     ) -> Result<()> {
         ctx.accounts.deposit(amount, x_max, y_max, expiration)
     }
+
+    pub fn lock(ctx: Context<Update>) -> Result<()> {
+        ctx.accounts.lock()
+    }
+
+    pub fn unlock(ctx: Context<Update>) -> Result<()> {
+        ctx.accounts.unlock()
+    }
 /* 
     pub fn deposit(ctx: Context<Initialize>) -> Result<()> {
         msg!("Greetings from: {:?}", ctx.program_id);
