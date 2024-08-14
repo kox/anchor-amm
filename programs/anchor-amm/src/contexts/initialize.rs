@@ -1,5 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token::AssociatedToken, token::{Mint, Token, TokenAccount}};
+use anchor_spl::{
+    associated_token::AssociatedToken, 
+    token::Token, 
+    token_interface::{ Mint, TokenAccount }
+};
 
 use crate::{AmmError, Config};
 
@@ -14,35 +18,25 @@ pub struct Initialize<'info> {
     pub payer: Signer<'info>,
 
     // An AMM allows to exchange 2 different SPL tokens, therefore we will need to define both mint accounts
-    pub mint_x: Account<'info, Mint>,
-    pub mint_y: Account<'info, Mint>,
-
-    // Our first PDA will be for minting LP tokens
-    #[account(
-        init,
-        seeds = [b"lp", config.key.as_ref()],
-        payer = payer,
-        bump,
-        mint::decimals = 6,
-        mint::authority = auth,
-    )]
-    pub mint_lp: Account<'info, Mint>,
+    pub x_mint: Box<InterfaceAccount<'info, Mint>>,
+    pub y_mint: Box<InterfaceAccount<'info, Mint>>,
 
     // We will need ATAs to store X and Y tokens
     #[account(
         init,
         payer = payer,
-        associated_token::mint = mint_x,
+        associated_token::mint = x_mint,
         associated_token::authority = auth,
     )]
-    pub vault_x: Account<'info, TokenAccount>,
+    pub x_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    
     #[account(
         init,
         payer = payer,
-        associated_token::mint = mint_y,
+        associated_token::mint = y_mint,
         associated_token::authority = auth,
     )]
-    pub vault_y: Account<'info, TokenAccount>,
+    pub y_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// CHECK: This account is only used to sign. it doesn't contain SOL
     #[account(seeds = [b"auth"], bump)]
@@ -75,21 +69,14 @@ impl<'info> Initialize<'info> {
         // Fee can't be higher than 100%. We will  pass it without decimas 0-10000
         require!(fee <= 10000, AmmError::InvalidFee);
 
-        let (auth_bump, config_bump, lp_bump) = (
-            bumps.auth,
-            bumps.config,
-            bumps.mint_lp,
-        );
-
         self.config.init(
             seed,
             authority,
-            self.mint_x.key(),
-            self.mint_y.key(),
+            self.x_mint.key(),
+            self.y_mint.key(),
             fee,
-            auth_bump,
-            config_bump,
-            lp_bump,
+            bumps.auth,
+            bumps.config,
         );
 
         Ok(())

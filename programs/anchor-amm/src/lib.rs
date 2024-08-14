@@ -11,7 +11,7 @@ mod state;
 use contexts::*;
 pub use errors::*;
 pub use state::*;
-
+pub use constants::*;
 
 #[program]
 pub mod anchor_amm {

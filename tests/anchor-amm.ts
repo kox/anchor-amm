@@ -7,7 +7,7 @@ import { BN } from "bn.js";
 import { assert } from "chai";
 
 import { newMintToAta } from './utils';
-import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 
 describe("anchor-amm", () => {
@@ -68,6 +68,19 @@ describe("anchor-amm", () => {
   let yVaultAta: PublicKey = undefined;
   let lpVaultAta: PublicKey = undefined;
 
+  const accounts = {
+    auth,
+    xMint,
+    yMint,
+    lpMint,
+    xVaultAta,
+    yVaultAta,
+    config,
+    tokenProgram: TOKEN_2022_PROGRAM_ID,
+    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+    SystemProgram: SystemProgram.programId,
+  }
+
   it("should airdrop SOL to the main users!", async () => {
     let tx = new Transaction();
     tx.instructions = [
@@ -106,7 +119,7 @@ describe("anchor-amm", () => {
     // Assert that mints are defined
     assert.exists(xMint, "xMint should be created");
     assert.exists(yMint, "yMint should be created");
-    
+
     // Assert that ATAs are defined
     assert.exists(xAta, "xAta should be created");
     assert.exists(yAta, "yAta should be created");
@@ -124,14 +137,39 @@ describe("anchor-amm", () => {
     // Optionally, assert the initial token balances (assuming newMintToAta mints some tokens)
     const xAtaBalance = await connection.getTokenAccountBalance(xAta);
     const yAtaBalance = await connection.getTokenAccountBalance(yAta);
+
     assert.equal(xAtaBalance.value.uiAmount, 1000, "xAta should have 1000 tokens");
     assert.equal(yAtaBalance.value.uiAmount, 1000, "yAta should have 1000 tokens");
-
-    // Assert that vault ATAs are initialized with zero balance
-    const xVaultAtaBalance = await connection.getTokenAccountBalance(xVaultAta);
-    const yVaultAtaBalance = await connection.getTokenAccountBalance(yVaultAta);
-    assert.equal(xVaultAtaBalance.value.uiAmount, 0, "xVaultAta should have 0 tokens initially");
-    assert.equal(yVaultAtaBalance.value.uiAmount, 0, "yVaultAta should have 0 tokens initially");
-
   });
+
+  it('should initialize the config account and the 2 empty vaults per X and Y tokens', async () => {
+      await program.methods.initialize(seed, 100, creatorPool.publicKey)
+        .accounts({
+          payer: creatorPool.publicKey,
+          xMint,
+          yMint,   
+        })
+        .signers([creatorPool])
+        .rpc()
+        .then(confirm)
+        .then(log);
+
+      // Assert that vault ATAs are initialized with zero balance
+      const xVaultAtaBalance = await connection.getTokenAccountBalance(xVaultAta);
+      const yVaultAtaBalance = await connection.getTokenAccountBalance(yVaultAta);
+      
+      assert.equal(xVaultAtaBalance.value.uiAmount, 0, "xVaultAta should have 0 tokens initially");
+      assert.equal(yVaultAtaBalance.value.uiAmount, 0, "yVaultAta should have 0 tokens initially");
+      
+      // The config fee should be fillup too
+      const configAccount = await program.account.config.fetch(config);
+      assert.equal(configAccount.seed.toString(), seed.toString());
+      assert.equal(configAccount.authority.toString(), creatorPool.publicKey.toString());
+      assert.equal(configAccount.fee, 100);
+      assert.equal(configAccount.locked, false);
+  })
+
+  /* it('should be able to deposity tokens to the LP and it will receive LP tokens', async () => {
+    await program.methods
+  }); */
 });
