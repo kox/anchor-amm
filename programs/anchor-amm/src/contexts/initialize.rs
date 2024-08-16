@@ -5,7 +5,10 @@ use anchor_spl::{
     token_interface::{ Mint, TokenAccount }
 };
 
-use crate::{AmmError, Config};
+use crate::{ 
+    Config,
+    errors::AmmError,
+};
 
 /// Initialize Context
 /// 

@@ -9,9 +9,9 @@ mod helpers;
 mod state;
 
 use contexts::*;
-pub use errors::*;
 pub use state::*;
 pub use constants::*;
+
 
 #[program]
 pub mod anchor_amm {
@@ -42,6 +42,16 @@ pub mod anchor_amm {
 
     pub fn unlock(ctx: Context<Update>) -> Result<()> {
         ctx.accounts.unlock()
+    }
+
+    pub fn swap(
+        ctx: Context<Swap>,
+        amount_in: u64,
+        min_amount_out: u64,
+        is_x_to_y: bool,
+        expiration: i64
+    ) -> Result<()> {
+        ctx.accounts.swap(amount_in, min_amount_out, is_x_to_y, expiration)
     }
 /* 
     pub fn deposit(ctx: Context<Initialize>) -> Result<()> {

@@ -7,8 +7,8 @@ use anchor_spl::{
 // use constant_product_curve::ConstantProduct;
 
 use crate::{
-    assert_non_zero, assert_not_expired, assert_not_locked, helpers::ConstantProduct, AmmError,
-    Config,
+    assert_non_zero, assert_not_expired, assert_not_locked, helpers::ConstantProduct, Config,
+    errors::AmmError,
 };
 
 #[derive(Accounts)]

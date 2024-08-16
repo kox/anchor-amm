@@ -302,5 +302,70 @@ describe("anchor-amm", () => {
   });
 
   
+  it('should not be possible to swap 0 tokens', async () => {
+    try {
+      await program.methods.swap(
+        new BN(0),
+        new BN(1e5),
+        true,
+      )
+        .accounts({
+          payer: creatorPool.publicKey,
+          config: config,
+          xMint: xMint,
+          yMint: yMint,
+          xVaultAta: xVaultAta,
+          yVaultAta: yVaultAta,
+          xUser: xAta,
+          yUser: yAta,
+        })
+        .signers([creatorPool])
+        .rpc();
+
+        throw Error("IT should not arrive to this point.");
+    } catch (err) {
+      assert.ok(true);
+    }
+    
+  });
+
+
+  it('should be able to swap some X tokens', async () => {
+    await program.methods.swap(
+      new BN(1e6),
+      new BN(1e5),
+      true,
+      expiration,
+    )
+      .accounts({
+        payer: creatorPool.publicKey,
+        config: config,
+        xMint: xMint,
+        yMint: yMint,
+        xVaultAta: xVaultAta,
+        yVaultAta: yVaultAta,
+        xUser: xAta,
+        yUser: yAta,
+      })
+      .signers([creatorPool])
+      .rpc()
+      .then(confirm)
+      .then(log);
+
+      // Assert that vault ATAs are initialized with zero balance
+      const xBalance = await connection.getTokenAccountBalance(xVaultAta);
+      const yBalance = await connection.getTokenAccountBalance(yVaultAta);
+
+      assert.equal(xBalance.value.amount.toString(), "1000000999");
+      assert.equal(yBalance.value.amount.toString(), "1000000000");
+
+      // Optionally, assert the initial token balances (assuming newMintToAta mints some tokens)
+      const xAtaBalance = await connection.getTokenAccountBalance(xAta);
+      const yAtaBalance = await connection.getTokenAccountBalance(yAta);
+
+      assert.equal(xAtaBalance.value.amount.toString(), "999999001");
+      assert.equal(yAtaBalance.value.amount.toString(), "1000000000");
+  });  
+
 });
 

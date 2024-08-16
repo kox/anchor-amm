@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
 
-use crate::{has_update_authority, AmmError, Config};
+use crate::{
+    has_update_authority,  Config, 
+    errors::AmmError
+};
 
 #[derive(Accounts)]
 pub struct Update<'info> {
