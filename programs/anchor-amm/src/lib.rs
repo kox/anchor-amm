@@ -53,25 +53,16 @@ pub mod anchor_amm {
     ) -> Result<()> {
         ctx.accounts.swap(amount_in, min_amount_out, is_x_to_y, expiration)
     }
-/* 
-    pub fn deposit(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
-        Ok(())
+
+    pub fn withdraw(
+        ctx: Context<Withdraw>,
+        amount: u64,
+        x_min: u64,
+        y_min: u64,
+        expiration: i64,
+    ) -> Result<()> {
+        ctx.accounts.withdraw(amount, x_min, y_min, expiration)
     }
 
-    pub fn withdraw(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
-        Ok(())
-    }
-
-    pub fn swap(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
-        Ok(())
-    }
-
-    pub fn unlock(ctx: Context<Initialize>) -> Result<()> {
-        msg!("Greetings from: {:?}", ctx.program_id);
-        Ok(())
-    } */
 }
 

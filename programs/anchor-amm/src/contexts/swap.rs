@@ -36,7 +36,7 @@ pub struct Swap<'info> {
     // now we are going to define the lp_mint. IT will contain the token information for our LPs
     #[account(
         seeds = [b"lp", config.key().as_ref()],
-        bump,
+        bump = config.lp_bump,
     )]
     pub lp_mint: Box<InterfaceAccount<'info, Mint>>,
 

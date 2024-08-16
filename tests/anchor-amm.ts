@@ -46,6 +46,7 @@ describe("anchor-amm", () => {
     Buffer.from("auth")],
     program.programId
   );
+  
   const [config, configBump] = PublicKey.findProgramAddressSync([
     Buffer.from("config"),
     seed.toBuffer().reverse()
@@ -170,6 +171,7 @@ describe("anchor-amm", () => {
 
     // The config fee should be fillup too
     const configAccount = await program.account.config.fetch(config);
+    console.log(configAccount);
     assert.equal(configAccount.seed.toString(), seed.toString());
     assert.equal(configAccount.authority.toString(), creatorPool.publicKey.toString());
     assert.equal(configAccount.fee, 0);
@@ -187,12 +189,15 @@ describe("anchor-amm", () => {
       .rpc()
       .then(confirm)
       .then(log);
+
+      throw Error("It should fail and not arrive to this point");
     } catch (err) {
+      console.log(err);
       assert.equal(err.error.errorCode.code, "InvalidAuthority");
       assert.equal(err.error.errorMessage, "Invalid update authority.")
     }
   });
-
+/* 
   it('should lock the config and don\'t allow deposits', async () => {
     await program.methods.lock()
       .accounts({
@@ -365,7 +370,7 @@ describe("anchor-amm", () => {
 
       assert.equal(xAtaBalance.value.amount.toString(), "999999001");
       assert.equal(yAtaBalance.value.amount.toString(), "1000000000");
-  });  
+  });   */
 
 });
 

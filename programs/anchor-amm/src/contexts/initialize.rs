@@ -24,6 +24,16 @@ pub struct Initialize<'info> {
     pub x_mint: Box<InterfaceAccount<'info, Mint>>,
     pub y_mint: Box<InterfaceAccount<'info, Mint>>,
 
+    #[account(
+        init_if_needed,
+        payer = payer,
+        seeds = [b"lp", config.key.as_ref()],
+        bump,
+        mint::decimals = 6,
+        mint::authority = payer
+    )]
+    pub lp_mint: Box<InterfaceAccount<'info, Mint>>,
+
     // We will need ATAs to store X and Y tokens
     #[account(
         init,
@@ -80,6 +90,7 @@ impl<'info> Initialize<'info> {
             fee,
             bumps.auth,
             bumps.config,
+            bumps.lp_mint,
         );
 
         Ok(())
