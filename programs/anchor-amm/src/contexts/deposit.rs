@@ -7,8 +7,8 @@ use anchor_spl::{
 // use constant_product_curve::ConstantProduct;
 
 use crate::{
-    assert_non_zero, assert_not_expired, assert_not_locked, helpers::ConstantProduct, AmmError,
-    Config,
+    assert_non_zero, assert_not_expired, assert_not_locked, helpers::ConstantProduct, Config,
+    errors::AmmError,
 };
 
 #[derive(Accounts)]
@@ -22,12 +22,9 @@ pub struct Deposit<'info> {
 
     // now we are going to define the lp_mint. IT will contain the token information for our LPs
     #[account(
-        init_if_needed,
-        payer = payer,
+        mut,
         seeds = [b"lp", config.key().as_ref()],
-        bump,
-        mint::decimals = 6,
-        mint::authority = payer
+        bump = config.lp_bump
     )]
     pub lp_mint: Box<InterfaceAccount<'info, Mint>>,
 

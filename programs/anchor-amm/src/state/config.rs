@@ -21,6 +21,7 @@ pub struct Config {
     // We save the bumps to perform better the PDA seed discovery 
     pub auth_bump: u8,
     pub config_bump: u8,
+    pub lp_bump: u8,
 }
 
 impl Config {
@@ -35,6 +36,7 @@ impl Config {
         fee: u16,
         auth_bump: u8,
         config_bump: u8,
+        lp_bump: u8,
     ) {
         self.seed = seed;
         self.authority = authority;
@@ -44,5 +46,6 @@ impl Config {
         self.locked = false;
         self.auth_bump = auth_bump;
         self.config_bump = config_bump; 
+        self.lp_bump = lp_bump; 
     }
 } 

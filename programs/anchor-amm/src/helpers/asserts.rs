@@ -50,7 +50,7 @@ macro_rules! has_update_authority {
     ($x:expr) => {
         match $x.config.authority {
             Some(a) => {
-                require_keys_eq!(a, $x.user.key(), AmmError::InvalidAuthority);
+                require_keys_eq!(a, $x.payer.key(), AmmError::InvalidAuthority);
             },
             None => return err!(AmmError::NoAuthoritySet)
         }

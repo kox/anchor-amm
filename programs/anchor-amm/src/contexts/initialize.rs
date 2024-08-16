@@ -5,7 +5,10 @@ use anchor_spl::{
     token_interface::{ Mint, TokenAccount }
 };
 
-use crate::{AmmError, Config};
+use crate::{ 
+    Config,
+    errors::AmmError,
+};
 
 /// Initialize Context
 /// 
@@ -20,6 +23,16 @@ pub struct Initialize<'info> {
     // An AMM allows to exchange 2 different SPL tokens, therefore we will need to define both mint accounts
     pub x_mint: Box<InterfaceAccount<'info, Mint>>,
     pub y_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+        init_if_needed,
+        payer = payer,
+        seeds = [b"lp", config.key.as_ref()],
+        bump,
+        mint::decimals = 6,
+        mint::authority = payer
+    )]
+    pub lp_mint: Box<InterfaceAccount<'info, Mint>>,
 
     // We will need ATAs to store X and Y tokens
     #[account(
@@ -77,6 +90,7 @@ impl<'info> Initialize<'info> {
             fee,
             bumps.auth,
             bumps.config,
+            bumps.lp_mint,
         );
 
         Ok(())
